@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SAT TikTok Studio</title>
+<script src="https://cdn.jsdelivr.net/npm/fix-webm-duration@1.0.6/fix-webm-duration.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --accent: #E8553A;
+    --accent-glow: #E8553A44;
+    --bg: #0E0E10;
+    --surface: #18181B;
+    --surface2: #222225;
+    --border: #2E2E33;
+    --text: #E8E8ED;
+    --dim: #8A8A93;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'DM Sans', system-ui, sans-serif;
+    background: var(--bg); color: var(--text);
+    min-height: 100vh; display: flex; flex-direction: column;
+  }
+
+  /* Header */
+  .header {
+    padding: 14px 24px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    background: var(--surface); position: sticky; top: 0; z-index: 100;
+  }
+  .logo { font-size: 18px; font-weight: 800; letter-spacing: -0.03em; }
+  .logo b { color: var(--accent); }
+  .stepper { display: flex; align-items: center; gap: 6px; }
+  .sdot {
+    width: 30px; height: 30px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700;
+    background: var(--surface2); color: var(--dim); border: 1.5px solid var(--border);
+    transition: all 0.3s;
+  }
+  .sdot.on { background: var(--accent); color: #fff; border-color: var(--accent); box-shadow: 0 0 14px var(--accent-glow); }
+  .sdot.done { background: #E8553A22; color: var(--accent); border-color: #E8553A66; cursor: pointer; }
+  .sline { width: 22px; height: 2px; background: var(--border); transition: background 0.3s; }
+  .sline.on { background: #E8553A66; }
+  .slbl { font-size: 11px; font-weight: 600; margin-left: 2px; }
+
+  /* Main */
+  .main { flex: 1; display: flex; justify-content: center; align-items: center; padding: 28px; }
+
+  /* Buttons */
+  button {
+    font-family: inherit; cursor: pointer; border: none; border-radius: 8px;
+    font-weight: 600; font-size: 14px; padding: 12px 24px; transition: all 0.15s;
+  }
+  button:hover { filter: brightness(1.12); }
+  button:active { transform: scale(0.98); }
+  button:disabled { opacity: 0.4; cursor: not-allowed; filter: none; }
+  .bp { background: var(--accent); color: #fff; }
+  .bd { background: #dc2626; color: #fff; }
+  .bg { background: transparent; color: var(--dim); border: 1px solid var(--border); }
+
+  /* Dropzone */
+  .dropzone {
+    width: 100%; max-width: 400px; aspect-ratio: 9/12;
+    border: 2px dashed var(--border); border-radius: 16px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px;
+    cursor: pointer; background: var(--surface); transition: all 0.2s; overflow: hidden;
+  }
+  .dropzone.drag { border-color: var(--accent); background: #E8553A08; }
+  .dropzone img { width: 100%; height: 100%; object-fit: contain; padding: 8px; }
+
+  /* Stage */
+  .layout { display: flex; gap: 28px; align-items: flex-start; max-width: 760px; width: 100%; }
+  .stage {
+    width: 340px; height: 604px; flex-shrink: 0;
+    border-radius: 14px; overflow: hidden; border: 2px solid var(--border);
+    display: flex; flex-direction: column; background: #000; position: relative;
+  }
+  .stage-q { overflow: hidden; display: flex; align-items: center; justify-content: center; background: #fff; }
+  .stage-q img { width: 100%; height: 100%; object-fit: contain; }
+  .stage-c { border-top: 2.5px solid var(--accent); }
+  .stage-c iframe { width: 100%; height: 100%; border: none; display: block; }
+  .ctrl { flex: 1; min-width: 220px; display: flex; flex-direction: column; gap: 16px; }
+
+  /* Misc */
+  .badge { display: inline-block; background: #E8553A22; color: var(--accent); padding: 4px 11px; border-radius: 20px; font-size: 11px; font-weight: 700; letter-spacing: 0.04em; }
+  .lbl { font-size: 11px; color: var(--dim); font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; }
+  .err { background: #dc262618; border: 1px solid #dc262655; color: #fca5a5; padding: 10px 14px; border-radius: 8px; font-size: 13px; }
+  .tip { padding: 14px 16px; background: var(--surface2); border-radius: 10px; font-size: 12px; color: var(--dim); line-height: 1.6; }
+  .tip strong { color: var(--text); }
+  .note { padding: 10px 14px; background: var(--surface2); border-radius: 10px; font-size: 12px; color: var(--dim); line-height: 1.5; border-left: 3px solid var(--accent); }
+  .note strong { color: var(--text); }
+  input[type="range"] { width: 100%; accent-color: var(--accent); cursor: pointer; height: 4px; }
+  .vbox { width: 340px; border-radius: 14px; overflow: hidden; border: 2px solid var(--border); background: #000; flex-shrink: 0; }
+  .vbox video { width: 100%; display: block; }
+
+  /* Recording */
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.25} }
+  .recdot { width: 10px; height: 10px; border-radius: 50%; background: #ef4444; animation: pulse 1s ease-in-out infinite; }
+  .recbar { display: flex; align-items: center; gap: 8px; padding: 10px 14px; background: #dc262622; border-radius: 10px; border: 1px solid #dc262644; }
+  .countdown { position: absolute; inset: 0; z-index: 15; background: rgba(0,0,0,0.75); display: flex; align-items: center; justify-content: center; border-radius: 14px; font-size: 80px; font-weight: 800; color: var(--accent); animation: cpop 0.4s ease-out; }
+  @keyframes cpop { 0%{transform:scale(1.5);opacity:0} 100%{transform:scale(1);opacity:1} }
+  .fade { animation: fadeIn 0.3s ease; }
+  @keyframes fadeIn { 0%{opacity:0;transform:translateY(10px)} 100%{opacity:1;transform:translateY(0)} }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo"><b>SAT</b> TikTok Studio</div>
+  <div class="stepper" id="stepper"></div>
+</div>
+
+<div class="main">
+  <div id="app"></div>
+</div>
+
+<!-- Hidden utility elements -->
+<input type="file" id="filePicker" accept="image/*" style="display:none">
+<canvas id="cropCanvas" style="display:none"></canvas>
+<canvas id="mergeCanvas" style="display:none"></canvas>
+<video id="screenVid" style="display:none" muted playsinline></video>
+
+<script>
+// ════════════════════════════════════════
+// STATE
+// ════════════════════════════════════════
+const S = {
+  step: 0, image: null, split: 45,
+  recording: false, recTime: 0, recBlob: null, recUrl: null,
+  voiceover: false, voTime: 0, finalBlob: null, finalUrl: null,
+  error: null,
+};
+const STEPS = ["Upload", "Record", "Voiceover", "Export"];
+let recorder = null, chunks = [], screenStream = null, audioStream = null;
+let timer = null, anim = null, recStart = 0;
+
+const $ = function(id) { return document.getElementById(id); };
+const fmt = function(s) { return String(Math.floor(s/60)).padStart(2,"0") + ":" + String(s%60).padStart(2,"0"); };
+
+function getMime() {
+  var list = ["video/webm;codecs=vp9,opus","video/webm;codecs=vp8,opus","video/webm;codecs=vp9","video/webm"];
+  for (var i = 0; i < list.length; i++) {
+    if (MediaRecorder.isTypeSupported(list[i])) return list[i];
+  }
+  return "";
+}
+
+// Safe duration fix — if the library fails or isn't loaded, just use the raw blob
+function fixDuration(blob, durationMs, callback) {
+  var called = false;
+  function done(result) {
+    if (called) return;
+    called = true;
+    callback(result || blob);
+  }
+  try {
+    if (typeof fixWebmDuration === "function") {
+      fixWebmDuration(blob, durationMs, done);
+      // Safety net — if callback never fires in 5s, proceed with raw blob
+      setTimeout(function() { done(blob); }, 5000);
+    } else {
+      done(blob);
+    }
+  } catch (e) {
+    console.warn("fixWebmDuration failed:", e);
+    done(blob);
+  }
+}
+
+// ════════════════════════════════════════
+// STEPPER
+// ════════════════════════════════════════
+function renderStepper() {
+  var html = "";
+  for (var i = 0; i < STEPS.length; i++) {
+    var cls = i === S.step ? "on" : i < S.step ? "done" : "";
+    if (i > 0) html += '<div class="sline' + (i <= S.step ? " on" : "") + '"></div>';
+    html += '<div style="display:flex;align-items:center;gap:4px"' + (i < S.step ? ' onclick="goStep('+i+')"' : '') + '>';
+    html += '<div class="sdot ' + cls + '">' + (i < S.step ? "✓" : i+1) + '</div>';
+    if (i === S.step) html += '<span class="slbl" style="color:var(--text)">' + STEPS[i] + '</span>';
+    html += '</div>';
+  }
+  $("stepper").innerHTML = html;
+}
+
+function goStep(i) { S.step = i; S.error = null; render(); }
+
+// ════════════════════════════════════════
+// RENDER — only called for step transitions, NEVER during active recording
+// ════════════════════════════════════════
+function render() {
+  renderStepper();
+  var el = $("app");
+  if (S.step === 0) renderUpload(el);
+  else if (S.step === 1) renderRecord(el);
+  else if (S.step === 2) renderVoiceover(el);
+  else renderExport(el);
+}
+
+// ════════════════════════════════════════
+// STEP 0: UPLOAD
+// ════════════════════════════════════════
+function renderUpload(el) {
+  var imgHtml = S.image
+    ? '<img src="' + S.image + '" alt="Question">'
+    : '<svg width="48" height="48" fill="none" viewBox="0 0 24 24" stroke="var(--dim)" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 16v-8m0 0l-3 3m3-3l3 3M3 16.5V18a2.5 2.5 0 002.5 2.5h13A2.5 2.5 0 0021 18v-1.5"/></svg><span style="color:var(--dim);font-size:14px">Click or drag image here</span><span style="color:var(--dim);font-size:12px;opacity:0.6">PNG, JPG, WEBP</span>';
+
+  var btns = S.image ? '<div style="display:flex;gap:10px"><button class="bg" onclick="S.image=null;render()">Replace</button><button class="bp" onclick="goStep(1)">Continue to Record →</button></div>' : '';
+  var errHtml = S.error ? '<div class="err">' + S.error + '</div>' : '';
+
+  el.innerHTML = '<div class="fade" style="display:flex;flex-direction:column;align-items:center;gap:20px">' +
+    '<div style="text-align:center"><h2 style="font-size:22px;font-weight:800;margin-bottom:6px">Upload your SAT question</h2><p style="color:var(--dim);font-size:14px">Drop a screenshot or image of the problem</p></div>' +
+    '<div class="dropzone" id="dz" onclick="document.getElementById(\'filePicker\').click()">' + imgHtml + '</div>' +
+    btns + errHtml + '</div>';
+
+  var dz = $("dz");
+  dz.ondragover = function(e) { e.preventDefault(); dz.classList.add("drag"); };
+  dz.ondragleave = function() { dz.classList.remove("drag"); };
+  dz.ondrop = function(e) { e.preventDefault(); dz.classList.remove("drag"); handleFile(e.dataTransfer.files[0]); };
+}
+
+function handleFile(file) {
+  if (file && file.type.startsWith("image/")) {
+    if (S.image) URL.revokeObjectURL(S.image);
+    S.image = URL.createObjectURL(file); S.error = null;
+  } else { S.error = "Please upload an image file."; }
+  render();
+}
+$("filePicker").onchange = function() { if (this.files[0]) handleFile(this.files[0]); this.value = ""; };
+
+// ════════════════════════════════════════
+// STEP 1: RECORD
+// ════════════════════════════════════════
+function renderRecord(el) {
+  var imgTag = S.image ? '<img src="' + S.image + '" alt="Question">' : '';
+
+  el.innerHTML = '<div class="fade layout">' +
+    '<div style="position:relative;flex-shrink:0" id="stageWrap">' +
+      '<div class="stage" id="stage">' +
+        '<div class="stage-q" id="stageQ" style="height:' + S.split + '%">' + imgTag + '</div>' +
+        '<div class="stage-c" id="stageC" style="height:' + (100-S.split) + '%"><iframe src="https://www.desmos.com/calculator" title="Desmos" allow="clipboard-write"></iframe></div>' +
+      '</div>' +
+    '</div>' +
+    '<div class="ctrl">' +
+      '<div id="recStatus" style="display:none"></div>' +
+      '<div><span class="badge">STAGE PREVIEW</span>' +
+        '<h3 style="font-size:17px;font-weight:700;margin:10px 0 4px">Record your solution</h3>' +
+        '<p style="color:var(--dim);font-size:13px;line-height:1.5">Click <strong>Start Recording</strong>, select <strong>this browser tab</strong>, then solve the problem. Only the 9:16 stage area is captured.</p></div>' +
+      '<div><div class="lbl">Question / Calculator split</div>' +
+        '<div style="display:flex;align-items:center;gap:10px;margin-top:6px">' +
+          '<span id="splitL" style="font-size:12px;color:var(--dim)">' + S.split + '%</span>' +
+          '<input type="range" min="20" max="70" value="' + S.split + '" oninput="updateSplit(this.value)">' +
+          '<span id="splitR" style="font-size:12px;color:var(--dim)">' + (100-S.split) + '%</span>' +
+        '</div></div>' +
+      '<div style="display:flex;flex-direction:column;gap:8px">' +
+        '<button class="bp" id="recBtn" onclick="startRecording()">● Start Recording</button>' +
+        '<button class="bg" id="backBtn" onclick="goStep(0)">← Back to Upload</button>' +
+      '</div>' +
+      '<div id="recError"></div>' +
+      '<div class="tip"><strong>Tip:</strong> Pick <strong>"This Tab"</strong> when prompted. Keep under 60s for TikTok.</div>' +
+    '</div>' +
+  '</div>';
+}
+
+function updateSplit(v) {
+  S.split = Number(v);
+  var qEl = $("stageQ"), cEl = $("stageC");
+  if (qEl) qEl.style.height = S.split + "%";
+  if (cEl) cEl.style.height = (100 - S.split) + "%";
+  if ($("splitL")) $("splitL").textContent = S.split + "%";
+  if ($("splitR")) $("splitR").textContent = (100 - S.split) + "%";
+}
+
+function startRecording() {
+  S.error = null;
+  $("recBtn").disabled = true;
+
+  navigator.mediaDevices.getDisplayMedia({
+    video: { cursor: "always" }, audio: false, preferCurrentTab: true,
+  }).then(function(stream) {
+    screenStream = stream;
+    stream.getVideoTracks()[0].onended = function() {
+      if (recorder && recorder.state === "recording") { stopRecording(); }
+      else { S.recording = false; var b = $("recBtn"); if (b) b.disabled = false; }
+    };
+
+    // Countdown — direct DOM manipulation only, no render()
+    var wrap = $("stageWrap");
+    var cdEl = document.createElement("div");
+    cdEl.className = "countdown"; cdEl.id = "cdOverlay"; cdEl.textContent = "3";
+    wrap.appendChild(cdEl);
+
+    var c = 3;
+    var iv = setInterval(function() {
+      c--;
+      if (c > 0) {
+        cdEl.textContent = String(c);
+        cdEl.style.animation = "none"; cdEl.offsetHeight; cdEl.style.animation = "cpop 0.4s ease-out";
+      } else {
+        clearInterval(iv);
+        cdEl.remove();
+        beginRecording(stream);
+      }
+    }, 1000);
+
+  }).catch(function(err) {
+    var b = $("recBtn"); if (b) b.disabled = false;
+    if (err.name !== "NotAllowedError") {
+      var errEl = $("recError");
+      if (errEl) errEl.innerHTML = '<div class="err">Screen recording failed. Use Chrome or Edge and open this file directly.</div>';
+    }
+  });
+}
+
+function beginRecording(stream) {
+  var vid = $("screenVid");
+  var canvas = $("cropCanvas");
+  var ctx = canvas.getContext("2d");
+  canvas.width = 1080; canvas.height = 1920;
+
+  vid.srcObject = stream;
+  vid.play().then(function() {
+    var dpr = window.devicePixelRatio || 1;
+
+    function draw() {
+      var stage = $("stage");
+      if (!stage || vid.paused) return;
+      var r = stage.getBoundingClientRect();
+      ctx.drawImage(vid, r.left*dpr, r.top*dpr, r.width*dpr, r.height*dpr, 0, 0, 1080, 1920);
+      anim = requestAnimationFrame(draw);
+    }
+    draw();
+
+    var cStream = canvas.captureStream(30);
+    var mime = getMime();
+    var opts = mime ? { mimeType: mime } : {};
+    var rec = new MediaRecorder(cStream, opts);
+    chunks = [];
+
+    rec.ondataavailable = function(e) { if (e.data.size > 0) chunks.push(e.data); };
+
+    rec.onstop = function() {
+      var raw = new Blob(chunks, { type: "video/webm" });
+      var dur = Date.now() - recStart;
+      fixDuration(raw, dur, function(fixed) {
+        if (S.recUrl) URL.revokeObjectURL(S.recUrl);
+        S.recBlob = fixed;
+        S.recUrl = URL.createObjectURL(fixed);
+        S.recording = false; S.recTime = 0; S.step = 2;
+        render();
+      });
+    };
+
+    rec.start(1000);
+    recStart = Date.now();
+    recorder = rec;
+    S.recording = true; S.recTime = 0;
+
+    // ── Update buttons by ID (stable, no fragile selectors) ──
+    var recBtn = $("recBtn");
+    recBtn.className = "bd";
+    recBtn.textContent = "■ Stop Recording";
+    recBtn.disabled = false;
+    recBtn.onclick = function() { stopRecording(); };
+
+    var backBtn = $("backBtn");
+    backBtn.disabled = true;
+
+    var statusEl = $("recStatus");
+    statusEl.style.display = "block";
+    statusEl.innerHTML = '<div class="recbar"><div class="recdot"></div>' +
+      '<span id="recTimer" style="font-size:15px;font-weight:700;font-variant-numeric:tabular-nums;color:#fca5a5">00:00</span>' +
+      '<span style="font-size:12px;color:var(--dim);margin-left:auto">Recording…</span></div>';
+
+    timer = setInterval(function() {
+      S.recTime++;
+      var t = $("recTimer");
+      if (t) t.textContent = fmt(S.recTime);
+    }, 1000);
+  });
+}
+
+function stopRecording() {
+  clearInterval(timer);
+  cancelAnimationFrame(anim);
+  if (recorder && recorder.state !== "inactive") recorder.stop();
+  if (screenStream) { screenStream.getTracks().forEach(function(t) { t.stop(); }); screenStream = null; }
+  var vid = $("screenVid");
+  if (vid) { vid.pause(); vid.srcObject = null; }
+  S.recording = false;
+  // recorder.onstop callback handles the step transition
+}
+
+// ════════════════════════════════════════
+// STEP 2: VOICEOVER
+// ════════════════════════════════════════
+function renderVoiceover(el) {
+  el.innerHTML = '<div class="fade layout">' +
+    '<div class="vbox"><video id="voVid" src="' + S.recUrl + '" controls playsinline></video></div>' +
+    '<div class="ctrl">' +
+      '<div><span class="badge">VOICEOVER</span>' +
+        '<h3 style="font-size:17px;font-weight:700;margin:10px 0 4px">Add your explanation</h3>' +
+        '<p style="color:var(--dim);font-size:13px;line-height:1.5">Hit Start, say your intro, then press <strong>play on the video</strong> when you\'re ready to walk through the solution.</p></div>' +
+      '<div id="voStatus" style="display:none"></div>' +
+      '<div style="display:flex;flex-direction:column;gap:8px">' +
+        '<button class="bp" id="voBtn" onclick="startVoiceover()">🎙 Start Voiceover</button>' +
+        '<button class="bg" id="skipBtn" onclick="skipVoiceover()">Skip voiceover →</button>' +
+        '<button class="bg" id="rerecBtn" onclick="goStep(1)">← Re-record screen</button>' +
+      '</div>' +
+      '<div id="voError"></div>' +
+      '<div class="tip"><strong>Tip:</strong> Your mic starts recording immediately — do your intro first, then click play on the video whenever you\'re ready. Hit Stop when done.</div>' +
+    '</div>' +
+  '</div>';
+}
+
+function startVoiceover() {
+  navigator.mediaDevices.getUserMedia({ audio: true }).then(function(aStr) {
+    audioStream = aStr;
+    var video = $("voVid");
+    var canvas = $("mergeCanvas");
+
+    function afterLoad() {
+      canvas.width = video.videoWidth || 1080;
+      canvas.height = video.videoHeight || 1920;
+      var ctx = canvas.getContext("2d");
+
+      // Draw the first frame (paused) so the canvas isn't blank
+      video.currentTime = 0;
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+      // Continuous draw loop — draws current frame whether paused or playing
+      function draw() {
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        anim = requestAnimationFrame(draw);
+      }
+      draw();
+
+      // Set up the canvas stream with audio
+      var cStream = canvas.captureStream(30);
+      var at = aStr.getAudioTracks()[0];
+      if (at) cStream.addTrack(at);
+
+      var mime = getMime();
+      var opts = mime ? { mimeType: mime } : {};
+      var rec = new MediaRecorder(cStream, opts);
+      chunks = [];
+
+      rec.ondataavailable = function(e) { if (e.data.size > 0) chunks.push(e.data); };
+
+      rec.onstop = function() {
+        var raw = new Blob(chunks, { type: "video/webm" });
+        var dur = Date.now() - recStart;
+        fixDuration(raw, dur, function(fixed) {
+          if (S.finalUrl) URL.revokeObjectURL(S.finalUrl);
+          S.finalBlob = fixed;
+          S.finalUrl = URL.createObjectURL(fixed);
+          S.voiceover = false; S.voTime = 0; S.step = 3;
+          cancelAnimationFrame(anim);
+          render();
+        });
+      };
+
+      // Do NOT auto-play — leave video paused with controls visible
+      // User clicks play manually when ready
+
+      rec.start(1000);
+      recStart = Date.now();
+      recorder = rec;
+      S.voiceover = true; S.voTime = 0;
+
+      // Update UI by ID
+      var voBtn = $("voBtn");
+      voBtn.className = "bd";
+      voBtn.textContent = "■ Stop Voiceover";
+      voBtn.onclick = function() { stopVoiceover(); };
+
+      $("skipBtn").disabled = true;
+      $("rerecBtn").disabled = true;
+
+      var statusEl = $("voStatus");
+      statusEl.style.display = "block";
+      statusEl.innerHTML = '<div class="recbar"><div class="recdot"></div>' +
+        '<span id="voTimer" style="font-size:14px;font-weight:600;font-variant-numeric:tabular-nums;color:#fca5a5">00:00</span>' +
+        '<span style="font-size:12px;color:var(--dim);margin-left:auto">Recording… play video when ready</span></div>';
+
+      timer = setInterval(function() {
+        S.voTime++;
+        var t = $("voTimer");
+        if (t) t.textContent = fmt(S.voTime);
+      }, 1000);
+    }
+
+    if (video.readyState >= 2) { afterLoad(); }
+    else { video.onloadeddata = afterLoad; video.load(); }
+
+  }).catch(function() {
+    var errEl = $("voError");
+    if (errEl) errEl.innerHTML = '<div class="err">Microphone access failed. Allow mic permissions in your browser.</div>';
+  });
+}
+
+function stopVoiceover() {
+  clearInterval(timer);
+  var video = $("voVid");
+  if (video) video.pause();
+  if (recorder && recorder.state !== "inactive") recorder.stop();
+  if (audioStream) { audioStream.getTracks().forEach(function(t) { t.stop(); }); audioStream = null; }
+  cancelAnimationFrame(anim);
+  S.voiceover = false;
+  // recorder.onstop handles transition
+}
+
+function skipVoiceover() {
+  S.finalBlob = S.recBlob; S.finalUrl = S.recUrl;
+  S.step = 3; render();
+}
+
+// ════════════════════════════════════════
+// STEP 3: EXPORT
+// ════════════════════════════════════════
+function renderExport(el) {
+  el.innerHTML = '<div class="fade" style="display:flex;flex-direction:column;align-items:center;gap:20px;max-width:440px">' +
+    '<div style="text-align:center">' +
+      '<div style="font-size:44px;margin-bottom:8px">✓</div>' +
+      '<h2 style="font-size:22px;font-weight:800;margin-bottom:6px">Your TikTok is ready</h2>' +
+      '<p style="color:var(--dim);font-size:14px">Preview below, then download and import into CapCut.</p>' +
+    '</div>' +
+    '<div class="vbox"><video src="' + S.finalUrl + '" controls playsinline></video></div>' +
+    '<div style="display:flex;gap:10px;width:100%">' +
+      '<button class="bp" style="flex:1" onclick="downloadVideo()">↓ Download Video</button>' +
+      '<button class="bg" style="flex:1" onclick="startOver()">Start Over</button>' +
+    '</div>' +
+    '<div class="tip" style="width:100%">' +
+      '<strong>Next steps — CapCut:</strong><br>' +
+      '• Open <strong>CapCut desktop</strong> → Import this .webm → drag to timeline<br>' +
+      '• Add auto-captions, background music, trim dead air<br>' +
+      '• Export → <strong>Share to TikTok</strong> directly' +
+    '</div>' +
+    '<div class="note" style="width:100%">' +
+      '<strong>Why CapCut?</strong> It re-encodes to a TikTok-compatible format automatically, plus gives you captions, music, effects, and direct publishing.' +
+    '</div>' +
+  '</div>';
+}
+
+function downloadVideo() {
+  if (!S.finalUrl) return;
+  var a = document.createElement("a");
+  a.href = S.finalUrl;
+  a.download = "sat-tiktok-" + Date.now() + ".webm";
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+}
+
+function startOver() {
+  if (S.recUrl) URL.revokeObjectURL(S.recUrl);
+  if (S.finalUrl && S.finalUrl !== S.recUrl) URL.revokeObjectURL(S.finalUrl);
+  S.step = 0; S.recBlob = null; S.recUrl = null; S.finalBlob = null; S.finalUrl = null;
+  S.recording = false; S.voiceover = false; S.recTime = 0; S.voTime = 0; S.error = null;
+  render();
+}
+
+// ════════════════════════════════════════
+// INIT
+// ════════════════════════════════════════
+render();
+</script>
+</body>
+</html>
